@@ -58,3 +58,30 @@ class Service:
             # tests errors here
             raise error
         return item
+        
+    @start_span("service_update_item")
+    def update_item(self, item_id: str, text: str) -> dict:
+        """
+        Update item
+
+        :param item_id: the id which replaces an existing item's id if it exists
+
+        :return: Dict
+        """
+        logger.info(f"Updating Item: {item_id}")
+        now = datetime.datetime.utcnow().isoformat()
+        
+        try:
+            item = self.database.get_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id)
+
+            # update item's data
+            item["modification_info"]["last_modified_at"] = now
+            item["modification_info"]["last_modified_by"] = self.user_id
+            item["text"] = text
+
+            # update item in db 
+            self.database.put_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id, item_data=item)
+
+        except Exception as error:
+            print(error)
+            raise error

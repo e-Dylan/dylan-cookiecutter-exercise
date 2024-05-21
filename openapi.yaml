@@ -56,6 +56,7 @@ paths:
         httpMethod: POST
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateItem.Arn}:live/invocations
+  
   '/items/{item_id}':
     get:
       operationId: item_id
@@ -80,6 +81,54 @@ paths:
         passthroughBehavior: when_no_match
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetItem.Arn}:live/invocations
+    put:
+      operationId: item_id
+      summary: Update Item
+      description: Update details for an Item
+      parameters:
+        - $ref: '#/components/parameters/item_id'
+      responses:
+        '200':
+          $ref: '#/components/responses/UpdateItemResponse'
+        '400':
+          $ref: '#/components/responses/400BadRequestErrorResponse'
+        '404':
+          $ref: '#/components/responses/404NotFoundErrorResponse'
+      tags:
+        - src
+      security:
+        - BearerToken: []
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateItem.Arn}:live/invocations
+    delete:
+      operationId: item_id
+      summary: Delete Item
+      description: Delete an Item
+      parameters:
+        - $ref: '#/components/parameters/item_id'
+      responses:
+        '200':
+          $ref: '#/components/responses/DeleteItemResponse'
+        '400':
+          $ref: '#/components/responses/400BadRequestErrorResponse'
+        '404':
+          $ref: '#/components/responses/404NotFoundErrorResponse'
+      tags:
+        - src
+      security:
+        - BearerToken: []
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteItem.Arn}:live/invocations
+
+
 components:
   parameters:
     item_id:
@@ -96,6 +145,34 @@ components:
   responses:
     GetItemResponse:
       description: Details of an Item
+      content:
+        application/vnd.api+json:
+          schema:
+            type: object
+            required:
+              - data
+              - meta
+            properties:
+              data:
+                type: object
+              meta:
+                type: object
+    UpdateItemResponse:
+      description: Update an Item
+      content:
+        application/vnd.api+json:
+          schema:
+            type: object
+            required:
+              - data
+              - meta
+            properties:
+              data:
+                type: object
+              meta:
+                type: object
+    DeleteItemResponse:
+      description: Delete an Item
       content:
         application/vnd.api+json:
           schema:
