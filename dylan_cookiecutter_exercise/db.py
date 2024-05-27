@@ -127,3 +127,29 @@ class Db:
             raise ItemNotFound(item_type.value, tenant_id, item_id)
 
         return response.get("Item").get("data")
+
+    @staticmethod
+    @start_span("database_delete_item")
+    def delete_item(item_type: ItemType, tenant_id: str, item_id: str, fields=None) -> dict[str, Any]:
+        """
+        Read item of the given type from database
+        :param item_type: One of the types from ItemType
+        :param tenant_id: item tenant
+        :param item_id: item id
+        :param fields: optional parameter to specify fields that should be returned for item
+        :return: item's data
+        """
+        logger.info(f"Fetching {item_type.value} [{item_id}] from DB for tenant: [{tenant_id}]")
+
+        keys: ItemKeys = ItemKeys.get_keys(item_type, tenant_id, item_id)
+        kwargs: dict[str, Any] = {"Key": {PK_KEY: keys.primary}}
+
+        if fields:
+            kwargs.update(projection_expression(fields, path_prefix=DATA_ATTRIBUTE))
+
+        response = restricted_table(TABLE_NAME, tenant_id).delete_item(**kwargs)  # error
+
+        if response.get("Item") is None:
+            raise ItemNotFound(item_type.value, tenant_id, item_id)
+
+        return response.get("Item").get("data")

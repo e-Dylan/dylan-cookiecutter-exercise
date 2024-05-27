@@ -58,30 +58,45 @@ class Service:
             # tests errors here
             raise error
         return item
-        
-    @start_span("service_update_item")
-    def update_item(self, item_id: str, text: str) -> dict:
-        """
-        Update item
 
-        :param item_id: the id which replaces an existing item's id if it exists
+    @start_span("service_edit_item")
+    def edit_item(self, item_id: str, item: dict) -> dict:
+        """
+        Edit item
+
+        :param new_item: the item which replaces an existing item if it exists
 
         :return: Dict
         """
-        logger.info(f"Updating Item: {item_id}")
+        logger.info(f"Editing Item: {item_id}")
         now = datetime.datetime.utcnow().isoformat()
-        
+
         try:
-            item = self.database.get_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id)
+            old_item = self.database.get_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item['id'])
 
-            # update item's data
-            item["modification_info"]["last_modified_at"] = now
-            item["modification_info"]["last_modified_by"] = self.user_id
-            item["text"] = text
+            # edit item's data
+            old_item["modification_info"]["last_modified_at"] = now
+            old_item["modification_info"]["last_modified_by"] = self.user_id
+            old_item["text"] =  item["text"]
+            old_item["success"] = item["success"]
 
-            # update item in db 
-            self.database.put_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id, item_data=item)
+            # overwrite existing item in db with new data
+            self.database.put_item(
+                item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=old_item["id"], item_data=old_item
+            )
 
         except Exception as error:
             print(error)
             raise error
+        return old_item
+
+    @start_span("service_delete_item")
+    def delete_item(self, item_id: str) -> dict:
+        """
+        Delete an item using a tenant id to scope the lookup
+
+        :param item_id: The id of the user to fetch
+        :return: The full info of the item
+        """
+        logger.info(f"Deleting item: {item_id}")
+        return self.database.delete_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id)

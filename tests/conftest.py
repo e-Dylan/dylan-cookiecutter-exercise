@@ -130,3 +130,19 @@ def get_not_existing_item_event(jwts, api_gateway_event):
     event, context = api_gateway_event(path="/get_item/does-not-exist", method="GET", path_params=path_params.dict())
     event["headers"]["Authorization"] = jwts["IdToken"]
     yield event, context
+
+
+@pytest.fixture()
+def edit_correct_item_event(jwts, api_gateway_event):
+    path_params = ItemIdPathParam(item_id=ITEM_ID)
+    event, context = api_gateway_event(path=f"/edit_item/{ITEM_ID}", method="DELETE", path_params=path_params.dict())
+    event["headers"]["Authorization"] = jwts["IdToken"]
+    yield event, context
+
+
+@pytest.fixture()
+def delete_correct_item_event(jwts, api_gateway_event):
+    path_params = ItemIdPathParam(item_id=ITEM_ID)
+    event, context = api_gateway_event(path=f"/delete_item/{ITEM_ID}", method="DELETE", path_params=path_params.dict())
+    event["headers"]["Authorization"] = jwts["IdToken"]
+    yield event, context
