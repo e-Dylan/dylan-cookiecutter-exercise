@@ -103,6 +103,33 @@ class Db:
             raise
 
     @staticmethod
+    @start_span("database_update_item")
+    def update_item(item_type: ItemType, tenant_id: str, item_id: str, item_data: Mapping[str, Any] = None):
+        """
+        Store new item information in database
+        :param item_type: One of the types from ItemType
+        :param tenant_id: item tenant
+        :param item_id: item id
+        :param item_data: data to store with item
+        """
+        logger.info(f"Putting item from DB for item [{item_id}] for tenant [{tenant_id}]")
+        keys: ItemKeys = ItemKeys.get_keys(item_type, tenant_id, item_id)
+        item = {PK_KEY: keys.primary, ITEM_ID_ATTRIBUTE: item_id}
+        if item_data:
+            item[DATA_ATTRIBUTE] = item_data
+        kwargs = {"Item": item, "ConditionExpression": Attr(PK_KEY).not_exists()}
+        try:
+            restricted_table(TABLE_NAME, tenant_id).update_item(**kwargs)
+        except ClientError as client_error:
+            error = client_error.response.get("Error", {})
+            error_code = error.get("Code", "")
+            logger.error(f"Error Code: [{error_code}]")
+
+            if error_code == "ConditionalCheckFailedException":
+                raise ItemConflict(item_type.value, tenant_id, item_id) from client_error
+            raise
+
+    @staticmethod
     @start_span("database_get_item")
     def get_item(item_type: ItemType, tenant_id: str, item_id: str, fields=None) -> dict[str, Any]:
         """
@@ -147,9 +174,13 @@ class Db:
         if fields:
             kwargs.update(projection_expression(fields, path_prefix=DATA_ATTRIBUTE))
 
-        response = restricted_table(TABLE_NAME, tenant_id).delete_item(**kwargs)  # error
-
-        if response.get("Item") is None:
-            raise ItemNotFound(item_type.value, tenant_id, item_id)
-
-        return response.get("Item").get("data")
+        try:
+            restricted_table(TABLE_NAME, tenant_id).delete_item(**kwargs)
+        except ClientError as client_error:
+            error = client_error.response.get("Error", {})
+            error_code = error.get("Code", "")
+            logger.error(f"Error Code: [{error_code}]")
+            if error_code == "ConditionalCheckFailedException":
+                logger.exception("Item to delete does not exist")
+                raise ItemNotFound(item_type.value, tenant_id, item_id) from client_error
+            raise

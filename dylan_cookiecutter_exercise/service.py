@@ -68,21 +68,22 @@ class Service:
 
         :return: Dict
         """
-        logger.info(f"Editing Item: {item_id}")
-        now = datetime.datetime.utcnow().isoformat()
+        logger.info(f"Editing Item Id: {item_id}")
+        logger.info(f"Editing Item: {item}")
+        # now = datetime.datetime.utcnow().isoformat()
 
         try:
-            old_item = self.database.get_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item['id'])
+            old_item = self.database.get_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id)
 
             # edit item's data
-            old_item["modification_info"]["last_modified_at"] = now
-            old_item["modification_info"]["last_modified_by"] = self.user_id
-            old_item["text"] =  item["text"]
-            old_item["success"] = item["success"]
+            # old_item["modification_info"]["last_modified_at"] = now
+            # old_item["modification_info"]["last_modified_by"] = self.user_id
+            # old_item["text"] =  item["text"]
+            # old_item["success"] = item["success"]
 
             # overwrite existing item in db with new data
-            self.database.put_item(
-                item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=old_item["id"], item_data=old_item
+            self.database.update_item(
+                item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id, item_data=old_item
             )
 
         except Exception as error:

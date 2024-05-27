@@ -171,6 +171,7 @@ def edit_item(event: ItemModel, context: LambdaContext) -> dict:
     logger.info(f"With Tenant Context: [{tenant_id}]")
     try:
         item = service.edit_item(item_id=item_id, item=item_data)
+
         response = {
             "statusCode": HTTPStatus.OK,
             "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
@@ -243,11 +244,11 @@ def delete_item(event: ItemModel, context: LambdaContext) -> dict:
     # Database served as dependency injection here, so it will be easier to test this or mock it base on level 0
     service = Service(Db(), tenant_id, identity.sub)
     try:
-        existing_item = service.delete_item(item_id=item_id)
+        service.delete_item(item_id=item_id)  # returns deleted_item like get_item
         response = {
             "statusCode": HTTPStatus.OK,
             "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
-            "body": Item(**existing_item).json(),
+            "body": json.dumps({"success": True, "text": "some test text"}),
         }
     except ItemNotFound as error:
         error_context = {
