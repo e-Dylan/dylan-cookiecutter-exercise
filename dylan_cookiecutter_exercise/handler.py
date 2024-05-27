@@ -140,4 +140,141 @@ def get_item(event: ItemModel, context: LambdaContext) -> dict:
             "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
             "body": ErrorsBody(errors=[error_context]).json(),
         }
+
+    return response
+
+
+# pylint: disable=no-value-for-parameter
+@export_trace(export_service=ExportService.OTEL_COLLECTOR_LAYER)
+@join_trace(event_source=EventSource.API_GATEWAY_REQUEST)
+@event_parser(model=ItemModel)
+def edit_item(event: ItemModel, context: LambdaContext) -> dict:
+    """
+    Edit item
+
+    :param event: event with data to process
+    :param context: lambda execution context
+    """
+    logger.info(f"Event: {event}")
+    logger.info(f"Context: {context}")
+
+    identity = get_identity_from_event(event=event.dict(), verify=False)
+    path_parameters = ItemIdPathParam.validate(event.pathParameters)
+    item_id = path_parameters.item_id
+    tenant_id = identity.tenant
+    item_data = event.body.dict()
+    request_id = event.requestContext.requestId
+
+    # Database served as dependency injection here, so it will be easier to test this or mock it base on level 0
+    service = Service(Db(), tenant_id, identity.sub)
+    logger.info(f"Editing Item {item_data}")
+    logger.info(f"With Tenant Context: [{tenant_id}]")
+    try:
+        item = service.edit_item(item_id=item_id, item=item_data)
+
+        response = {
+            "statusCode": HTTPStatus.OK,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": json.dumps(item, indent=4),
+        }
+    except ItemConflict as error:
+        error_context = {
+            "id": request_id,
+            "code": error.code,
+            "title": error.title,
+            "detail": error.msg,
+            "status": "409",
+        }
+        response = {
+            "statusCode": HTTPStatus.CONFLICT,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": ErrorsBody(errors=[error_context]).json(),
+        }
+    except ItemNotFound as error:
+        error_context = {
+            "id": request_id,
+            "code": error.code,
+            "title": error.title,
+            "detail": error.msg,
+            "status": "404",
+        }
+        response = {
+            "statusCode": HTTPStatus.NOT_FOUND,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": ErrorsBody(errors=[error_context]).json(),
+        }
+    except ClientError as error:
+        error_context = {
+            "id": request_id,
+            "code": 400,
+            "title": "Unknown error",
+            "detail": error.args[0],
+            "status": "400",
+        }
+        response = {
+            "statusCode": HTTPStatus.BAD_REQUEST,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": ErrorsBody(errors=[error_context]).json(),
+        }
+    return response
+
+
+# pylint: disable=no-value-for-parameter
+@export_trace(export_service=ExportService.OTEL_COLLECTOR_LAYER)
+@join_trace(event_source=EventSource.API_GATEWAY_REQUEST)
+@event_parser(model=ItemModel)
+def delete_item(event: ItemModel, context: LambdaContext) -> dict:
+    """
+    Delete an item
+
+    :param event: event with data to process
+    :param context: lambda execution context
+    """
+    logger.info(f"Event: {event}")
+    logger.info(f"Context: {context}")
+    identity = get_identity_from_event(event=event.dict(), verify=False)
+    path_parameters = ItemIdPathParam.validate(event.pathParameters)
+    item_id = path_parameters.item_id
+    tenant_id = identity.tenant
+    request_id = event.requestContext.requestId
+
+    logger.info(f"Getting Item: [{item_id}]")
+    logger.info(f"With Tenant Context: [{tenant_id}]")
+
+    # Database served as dependency injection here, so it will be easier to test this or mock it base on level 0
+    service = Service(Db(), tenant_id, identity.sub)
+    try:
+        service.delete_item(item_id=item_id)  # returns deleted_item like get_item
+        response = {
+            "statusCode": HTTPStatus.OK,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": json.dumps({"success": True, "text": "some test text"}),
+        }
+    except ItemNotFound as error:
+        error_context = {
+            "id": request_id,
+            "code": error.code,
+            "title": error.title,
+            "detail": error.msg,
+            "status": "404",
+        }
+        response = {
+            "statusCode": HTTPStatus.NOT_FOUND,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": ErrorsBody(errors=[error_context]).json(),
+        }
+    except ClientError as error:
+        error_context = {
+            "id": request_id,
+            "code": 400,
+            "title": "Unknown error",
+            "detail": error.args[0],
+            "status": "400",
+        }
+        response = {
+            "statusCode": HTTPStatus.BAD_REQUEST,
+            "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),
+            "body": ErrorsBody(errors=[error_context]).json(),
+        }
+
     return response

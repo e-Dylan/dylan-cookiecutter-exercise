@@ -76,3 +76,27 @@ class TestHandler:
         body = json.loads(response["body"])
         assert "errors" in body
         assert body["errors"][0]["code"] == "ItemConflict"
+
+    # @mock.patch("handler.Db")
+    # def test_edit_item_success(self, mock_db, edit_correct_item_event):
+    #     event, context = edit_correct_item_event
+
+    #     mock_db.return_value = MockDb()
+    #     response = handler.edit_item(event, context)
+    #     assert response["statusCode"] == HTTPStatus.OK
+    #     body = json.loads(response["body"])
+    #     assert body == {"success": True, "text": "some test text"}
+    #     headers = response["headers"]
+    #     assert headers["Content-Type"] == "application/vnd.api+json"
+
+    @mock.patch("handler.Db")
+    def test_delete_item_success(self, mock_db, delete_correct_item_event):
+        event, context = delete_correct_item_event
+
+        mock_db.return_value = MockDb()
+        response = handler.delete_item(event, context)
+        assert response["statusCode"] == HTTPStatus.OK
+        body = json.loads(response["body"])
+        assert body == {"success": True, "text": "some test text"}
+        headers = response["headers"]
+        assert headers["Content-Type"] == "application/vnd.api+json"
