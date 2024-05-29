@@ -275,7 +275,7 @@ Resources:
         EditItem:
           Type: Api
           Properties:
-            Method: put
+            Method: patch
             Path: /items/{item_id}
             RestApiId: !Ref API
 

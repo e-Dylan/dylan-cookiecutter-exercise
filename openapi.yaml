@@ -81,8 +81,8 @@ paths:
         passthroughBehavior: when_no_match
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetItem.Arn}:live/invocations
-    put:
-      operationId: item_id_put
+    patch:
+      operationId: item_id_patch
       summary: Edit Item
       description: Edit details for an Item
       parameters:

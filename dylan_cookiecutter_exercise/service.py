@@ -70,26 +70,24 @@ class Service:
         """
         logger.info(f"Editing Item Id: {item_id}")
         logger.info(f"Editing Item: {item}")
-        # now = datetime.datetime.utcnow().isoformat()
+        now = datetime.datetime.utcnow().isoformat()
 
         try:
-            old_item = self.database.get_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id)
-
-            # edit item's data
-            # old_item["modification_info"]["last_modified_at"] = now
-            # old_item["modification_info"]["last_modified_by"] = self.user_id
-            # old_item["text"] =  item["text"]
-            # old_item["success"] = item["success"]
+            item["modification_info"] = {
+                "created_at": now,
+                "created_by": self.user_id,
+                "last_modified_at": now,
+                "last_modified_by": self.user_id,
+            }
+            item["id"] = item_id
 
             # overwrite existing item in db with new data
-            self.database.update_item(
-                item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id, item_data=old_item
-            )
+            self.database.edit_item(item_type=ItemType.ITEM, tenant_id=self.tenant_id, item_id=item_id, item_data=item)
 
         except Exception as error:
             print(error)
             raise error
-        return old_item
+        return item
 
     @start_span("service_delete_item")
     def delete_item(self, item_id: str) -> dict:

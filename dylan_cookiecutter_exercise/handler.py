@@ -244,7 +244,7 @@ def delete_item(event: ItemModel, context: LambdaContext) -> dict:
     # Database served as dependency injection here, so it will be easier to test this or mock it base on level 0
     service = Service(Db(), tenant_id, identity.sub)
     try:
-        service.delete_item(item_id=item_id)  # returns deleted_item like get_item
+        service.delete_item(item_id=item_id)
         response = {
             "statusCode": HTTPStatus.OK,
             "headers": Headers(content_type="application/vnd.api+json").dict(by_alias=True),

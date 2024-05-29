@@ -7,7 +7,7 @@ from typing import Any, Mapping, Optional
 
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
-from evertz_io_dynamo_utils.expressions import projection_expression
+from evertz_io_dynamo_utils.expressions import projection_expression, update_expression
 from evertz_io_identity_lib.iam import restricted_table
 from evertz_io_observability.decorators import start_span
 
@@ -103,8 +103,8 @@ class Db:
             raise
 
     @staticmethod
-    @start_span("database_update_item")
-    def update_item(item_type: ItemType, tenant_id: str, item_id: str, item_data: Mapping[str, Any] = None):
+    @start_span("database_edit_item")
+    def edit_item(item_type: ItemType, tenant_id: str, item_id: str, item_data: Mapping[str, Any] = None):
         """
         Store new item information in database
         :param item_type: One of the types from ItemType
@@ -112,22 +112,22 @@ class Db:
         :param item_id: item id
         :param item_data: data to store with item
         """
-        logger.info(f"Putting item from DB for item [{item_id}] for tenant [{tenant_id}]")
-        keys: ItemKeys = ItemKeys.get_keys(item_type, tenant_id, item_id)
-        item = {PK_KEY: keys.primary, ITEM_ID_ATTRIBUTE: item_id}
-        if item_data:
-            item[DATA_ATTRIBUTE] = item_data
-        kwargs = {"Item": item, "ConditionExpression": Attr(PK_KEY).not_exists()}
+
+        logger.info(f"Updating from DB for {item_type.value}: [{item_id}] for tenant: [{tenant_id}]")
+        keys = ItemKeys.get_keys(item_type, tenant_id, item_id)
         try:
-            restricted_table(TABLE_NAME, tenant_id).update_item(**kwargs)
+            return restricted_table(TABLE_NAME, tenant_id).update_item(
+                ReturnValues="ALL_NEW",
+                Key={PK_KEY: keys.primary},
+                **update_expression(update=item_data, path_prefix=DATA_ATTRIBUTE),
+            )["Attributes"][DATA_ATTRIBUTE]
+
         except ClientError as client_error:
             error = client_error.response.get("Error", {})
             error_code = error.get("Code", "")
             logger.error(f"Error Code: [{error_code}]")
-
-            if error_code == "ConditionalCheckFailedException":
-                raise ItemConflict(item_type.value, tenant_id, item_id) from client_error
-            raise
+            logger.exception(client_error)
+            raise (f"Error Code: [{error_code}]") from client_error
 
     @staticmethod
     @start_span("database_get_item")
